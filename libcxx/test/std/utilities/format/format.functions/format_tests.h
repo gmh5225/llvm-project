@@ -37,9 +37,9 @@ case #T[0]:                                                                     
   break;
 
 #if TEST_STD_VER > 20
-  constexpr std::string_view types = "aAbBcdeEfFgGopsxX?";
+  constexpr std::string_view types = "aAbBcdeEfFgGopPsxX?";
 #else
-  constexpr std::string_view types = "aAbBcdeEfFgGopsxX";
+  constexpr std::string_view types = "aAbBcdeEfFgGopPsxX";
 #endif
 
   for (auto type : types) {
@@ -61,6 +61,7 @@ case #T[0]:                                                                     
       CASE(G)
       CASE(o)
       CASE(p)
+      CASE(P)
       CASE(s)
       CASE(x)
       CASE(X)
@@ -74,6 +75,397 @@ case #T[0]:                                                                     
 #undef CASE
 
   return result;
+}
+
+template <class CharT, class TestFunction>
+void format_test_buffer_copy(TestFunction check) {
+  // *** copy ***
+  check(SV("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"),
+        SV("{}"),
+        SV("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"));
+
+  check(SV("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"),
+        SV("{}"),
+        SV("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"));
+
+  check(SV("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"),
+        SV("{}"),
+        SV("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"));
+
+  check(SV("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"),
+        SV("{}"),
+        SV("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"));
+
+  check(
+      SV("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"),
+      SV("{}"),
+      SV("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"));
+
+  // *** copy + push_back ***
+
+  check(SV("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "X"),
+        SV("{}X"),
+        SV("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"));
+
+  check(SV("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "X"),
+        SV("{}X"),
+        SV("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"));
+
+  check(SV("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "X"),
+        SV("{}X"),
+        SV("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"));
+
+  check(SV("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "X"),
+        SV("{}X"),
+        SV("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"));
+
+  check(
+      SV("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "X"),
+      SV("{}X"),
+      SV("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"));
+
+  // ***  push_back + copy ***
+
+  check(SV("X"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"),
+        SV("X{}"),
+        SV("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"));
+
+  check(SV("X"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"),
+        SV("X{}"),
+        SV("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"));
+
+  check(SV("X"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"),
+        SV("X{}"),
+        SV("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"));
+
+  check(SV("X"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"),
+        SV("X{}"),
+        SV("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+           "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"));
+
+  check(
+      SV("X"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"),
+      SV("X{}"),
+      SV("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"));
+}
+
+template <class CharT, class TestFunction>
+void format_test_buffer_full(TestFunction check) {
+  // *** fill ***
+  check(SV("||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"), SV("{:|<64}"), SV(""));
+
+  check(SV("||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"),
+        SV("{:|<128}"),
+        SV(""));
+
+  check(SV("||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"),
+        SV("{:|<256}"),
+        SV(""));
+
+  check(SV("||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"),
+        SV("{:|<512}"),
+        SV(""));
+
+  check(SV("||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"),
+        SV("{:|<1024}"),
+        SV(""));
+
+  // *** fill + push_back ***
+
+  check(SV("||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "X"),
+        SV("{:|<64}X"),
+        SV(""));
+
+  check(SV("||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "X"),
+        SV("{:|<128}X"),
+        SV(""));
+
+  check(SV("||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "X"),
+        SV("{:|<256}X"),
+        SV(""));
+
+  check(SV("||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "X"),
+        SV("{:|<512}X"),
+        SV(""));
+
+  check(SV("||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "X"),
+        SV("{:|<1024}X"),
+        SV(""));
+
+  // *** push_back + fill ***
+
+  check(SV("X"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"),
+        SV("X{:|<64}"),
+        SV(""));
+
+  check(SV("X"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"),
+        SV("X{:|<128}"),
+        SV(""));
+
+  check(SV("X"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"),
+        SV("X{:|<256}"),
+        SV(""));
+
+  check(SV("X"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"),
+        SV("X{:|<512}"),
+        SV(""));
+
+  check(SV("X"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"
+           "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||"),
+        SV("X{:|<1024}"),
+        SV(""));
 }
 
 // Using a const ref for world and universe so a string literal will be a character array.
@@ -2547,6 +2939,11 @@ void format_test_pointer(TestFunction check, ExceptionTest check_exception) {
   check(SV("answer is '0x0:::'"), SV("answer is '{::<6}'"), P(nullptr));
   check(SV("answer is ':0x0::'"), SV("answer is '{::^6}'"), P(nullptr));
 
+  // Test whether zero padding is ignored
+  check(SV("answer is ':::0x0'"), SV("answer is '{::>06}'"), P(nullptr));
+  check(SV("answer is '0x0:::'"), SV("answer is '{::<06}'"), P(nullptr));
+  check(SV("answer is ':0x0::'"), SV("answer is '{::^06}'"), P(nullptr));
+
   // *** Sign ***
   check_exception("The format-spec should consume the input or end with a '}'", SV("{:-}"), P(nullptr));
   check_exception("The format-spec should consume the input or end with a '}'", SV("{:+}"), P(nullptr));
@@ -2556,7 +2953,9 @@ void format_test_pointer(TestFunction check, ExceptionTest check_exception) {
   check_exception("The format-spec should consume the input or end with a '}'", SV("{:#}"), P(nullptr));
 
   // *** zero-padding ***
-  check_exception("A format-spec width field shouldn't have a leading zero", SV("{:0}"), P(nullptr));
+  check(SV("answer is '0x0000'"), SV("answer is '{:06}'"), P(nullptr));
+  check(SV("answer is '0x0000'"), SV("answer is '{:06p}'"), P(nullptr));
+  check(SV("answer is '0X0000'"), SV("answer is '{:06P}'"), P(nullptr));
 
   // *** precision ***
   check_exception("The format-spec should consume the input or end with a '}'", SV("{:.}"), P(nullptr));
@@ -2565,7 +2964,7 @@ void format_test_pointer(TestFunction check, ExceptionTest check_exception) {
   check_exception("The format-spec should consume the input or end with a '}'", SV("{:L}"), P(nullptr));
 
   // *** type ***
-  for (const auto& fmt : invalid_types<CharT>("p"))
+  for (const auto& fmt : invalid_types<CharT>("pP"))
     check_exception("The format-spec type has a type not supported for a pointer argument", fmt, P(nullptr));
 }
 
@@ -2719,7 +3118,13 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
       9,
       0);
 
-  // ** Test invalid format strings ***
+  // *** Test buffer boundaries format strings ***
+  if constexpr (modus == execution_modus::full) {
+    format_test_buffer_copy<CharT>(check);
+    format_test_buffer_full<CharT>(check);
+  }
+
+  // *** Test invalid format strings ***
   check_exception("The format string terminates at a '{'", SV("{"));
   check_exception("The replacement field misses a terminating '}'", SV("{:"), 42);
 

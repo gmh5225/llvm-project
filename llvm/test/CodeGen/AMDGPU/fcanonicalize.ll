@@ -465,6 +465,114 @@ define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal0_f32(ptr
   ret void
 }
 
+define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal0_f32_dynamic(ptr addrspace(1) %out) #5 {
+; GFX678-LABEL: test_no_denormals_fold_canonicalize_denormal0_f32_dynamic:
+; GFX678:       ; %bb.0:
+; GFX678-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; GFX678-NEXT:    s_mov_b32 s2, 0x7fffff
+; GFX678-NEXT:    v_mul_f32_e64 v2, 1.0, s2
+; GFX678-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX678-NEXT:    v_mov_b32_e32 v0, s0
+; GFX678-NEXT:    v_mov_b32_e32 v1, s1
+; GFX678-NEXT:    flat_store_dword v[0:1], v2
+; GFX678-NEXT:    s_endpgm
+;
+; GFX9-LABEL: test_no_denormals_fold_canonicalize_denormal0_f32_dynamic:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; GFX9-NEXT:    s_mov_b32 s2, 0x7fffff
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    v_max_f32_e64 v1, s2, s2
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: test_no_denormals_fold_canonicalize_denormal0_f32_dynamic:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-NEXT:    v_max_f32_e64 v1, 0x7fffff, 0x7fffff
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
+  %canonicalized = call float @llvm.canonicalize.f32(float bitcast (i32 8388607 to float))
+  store float %canonicalized, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal0_f32_dynamic_out(ptr addrspace(1) %out) #6 {
+; GFX678-LABEL: test_no_denormals_fold_canonicalize_denormal0_f32_dynamic_out:
+; GFX678:       ; %bb.0:
+; GFX678-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; GFX678-NEXT:    s_mov_b32 s2, 0x7fffff
+; GFX678-NEXT:    v_mul_f32_e64 v2, 1.0, s2
+; GFX678-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX678-NEXT:    v_mov_b32_e32 v0, s0
+; GFX678-NEXT:    v_mov_b32_e32 v1, s1
+; GFX678-NEXT:    flat_store_dword v[0:1], v2
+; GFX678-NEXT:    s_endpgm
+;
+; GFX9-LABEL: test_no_denormals_fold_canonicalize_denormal0_f32_dynamic_out:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; GFX9-NEXT:    s_mov_b32 s2, 0x7fffff
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    v_max_f32_e64 v1, s2, s2
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: test_no_denormals_fold_canonicalize_denormal0_f32_dynamic_out:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-NEXT:    v_max_f32_e64 v1, 0x7fffff, 0x7fffff
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
+  %canonicalized = call float @llvm.canonicalize.f32(float bitcast (i32 8388607 to float))
+  store float %canonicalized, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @test_no_denormals_fold_canonicalize_denormal0_f32_dynamic_in(ptr addrspace(1) %out) #7 {
+; GFX678-LABEL: test_no_denormals_fold_canonicalize_denormal0_f32_dynamic_in:
+; GFX678:       ; %bb.0:
+; GFX678-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; GFX678-NEXT:    s_mov_b32 s2, 0x7fffff
+; GFX678-NEXT:    v_mul_f32_e64 v2, 1.0, s2
+; GFX678-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX678-NEXT:    v_mov_b32_e32 v0, s0
+; GFX678-NEXT:    v_mov_b32_e32 v1, s1
+; GFX678-NEXT:    flat_store_dword v[0:1], v2
+; GFX678-NEXT:    s_endpgm
+;
+; GFX9-LABEL: test_no_denormals_fold_canonicalize_denormal0_f32_dynamic_in:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; GFX9-NEXT:    s_mov_b32 s2, 0x7fffff
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    v_max_f32_e64 v1, s2, s2
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX9-NEXT:    s_endpgm
+;
+; GFX11-LABEL: test_no_denormals_fold_canonicalize_denormal0_f32_dynamic_in:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-NEXT:    v_max_f32_e64 v1, 0x7fffff, 0x7fffff
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
+  %canonicalized = call float @llvm.canonicalize.f32(float bitcast (i32 8388607 to float))
+  store float %canonicalized, ptr addrspace(1) %out
+  ret void
+}
+
 define amdgpu_kernel void @test_denormals_fold_canonicalize_denormal0_f32(ptr addrspace(1) %out) #3 {
 ; GFX678-LABEL: test_denormals_fold_canonicalize_denormal0_f32:
 ; GFX678:       ; %bb.0:
@@ -2207,7 +2315,6 @@ define <2 x float> @v_test_canonicalize_v2f32_flush(<2 x float> %arg) #1 {
 ; GFX11-LABEL: v_test_canonicalize_v2f32_flush:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_dual_max_f32 v0, v0, v0 :: v_dual_max_f32 v1, v1, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %canon = call <2 x float> @llvm.canonicalize.v2f32(<2 x float> %arg)
@@ -2235,7 +2342,6 @@ define <3 x float> @v_test_canonicalize_v3f32_flush(<3 x float> %arg) #1 {
 ; GFX11-LABEL: v_test_canonicalize_v3f32_flush:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_dual_max_f32 v0, v0, v0 :: v_dual_max_f32 v1, v1, v1
 ; GFX11-NEXT:    v_max_f32_e32 v2, v2, v2
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -2266,7 +2372,6 @@ define <4 x float> @v_test_canonicalize_v4f32_flush(<4 x float> %arg) #1 {
 ; GFX11-LABEL: v_test_canonicalize_v4f32_flush:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_dual_max_f32 v0, v0, v0 :: v_dual_max_f32 v1, v1, v1
 ; GFX11-NEXT:    v_dual_max_f32 v2, v2, v2 :: v_dual_max_f32 v3, v3, v3
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -2305,7 +2410,6 @@ define <8 x float> @v_test_canonicalize_v8f32_flush(<8 x float> %arg) #1 {
 ; GFX11-LABEL: v_test_canonicalize_v8f32_flush:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_dual_max_f32 v0, v0, v0 :: v_dual_max_f32 v1, v1, v1
 ; GFX11-NEXT:    v_dual_max_f32 v2, v2, v2 :: v_dual_max_f32 v3, v3, v3
 ; GFX11-NEXT:    v_dual_max_f32 v4, v4, v4 :: v_dual_max_f32 v5, v5, v5
@@ -2333,7 +2437,6 @@ define <2 x double> @v_test_canonicalize_v2f64(<2 x double> %arg) #1 {
 ; GFX11-LABEL: v_test_canonicalize_v2f64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
 ; GFX11-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -2361,7 +2464,6 @@ define <3 x double> @v_test_canonicalize_v3f64(<3 x double> %arg) #1 {
 ; GFX11-LABEL: v_test_canonicalize_v3f64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
 ; GFX11-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
 ; GFX11-NEXT:    v_max_f64 v[4:5], v[4:5], v[4:5]
@@ -2392,7 +2494,6 @@ define <4 x double> @v_test_canonicalize_v4f64(<4 x double> %arg) #1 {
 ; GFX11-LABEL: v_test_canonicalize_v4f64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
 ; GFX11-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
 ; GFX11-NEXT:    v_max_f64 v[4:5], v[4:5], v[4:5]
@@ -2407,3 +2508,6 @@ attributes #1 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" 
 attributes #2 = { nounwind "denormal-fp-math"="preserve-sign,preserve-sign" }
 attributes #3 = { nounwind "denormal-fp-math"="ieee,ieee" }
 attributes #4 = { nounwind "denormal-fp-math"="preserve-sign,preserve-sign" }
+attributes #5 = { nounwind "denormal-fp-math-f32"="dynamic,dynamic" }
+attributes #6 = { nounwind "denormal-fp-math-f32"="dynamic,ieee" }
+attributes #7 = { nounwind "denormal-fp-math-f32"="ieee,dynamic" }

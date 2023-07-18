@@ -626,7 +626,8 @@ void XCOFFObjectWriter::recordRelocation(MCAssembler &Asm,
 
   const uint32_t Index = getIndex(SymA, SymASec);
   if (Type == XCOFF::RelocationType::R_POS ||
-      Type == XCOFF::RelocationType::R_TLS)
+      Type == XCOFF::RelocationType::R_TLS ||
+      Type == XCOFF::RelocationType::R_TLS_LE)
     // The FixedValue should be symbol's virtual address in this object file
     // plus any constant value that we might get.
     FixedValue = getVirtualAddress(SymA, SymASec) + Target.getConstant();
@@ -664,10 +665,10 @@ void XCOFFObjectWriter::recordRelocation(MCAssembler &Asm,
     // address, fragment offset and Fixup offset.
     uint64_t BRInstrAddress =
         SectionMap[ParentSec]->Address + FixupOffsetInCsect;
-    // The FixedValue should be the difference between SymA csect address and BR
-    // instr address plus any constant value.
-    FixedValue =
-        SectionMap[SymASec]->Address - BRInstrAddress + Target.getConstant();
+    // The FixedValue should be the difference between symbol's virtual address
+    // and BR instr address plus any constant value.
+    FixedValue = getVirtualAddress(SymA, SymASec) - BRInstrAddress +
+                 Target.getConstant();
   } else if (Type == XCOFF::RelocationType::R_REF) {
     // The FixedValue and FixupOffsetInCsect should always be 0 since it
     // specifies a nonrelocating reference.

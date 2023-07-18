@@ -260,6 +260,30 @@ DeletionKind LLVM::DbgDeclareOp::removeBlockingUses(
   return DeletionKind::Delete;
 }
 
+bool LLVM::DbgValueOp::canUsesBeRemoved(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses) {
+  // There is only one operand that we can remove the use of.
+  if (blockingUses.size() != 1)
+    return false;
+
+  return (*blockingUses.begin())->get() == getValue();
+}
+
+DeletionKind LLVM::DbgValueOp::removeBlockingUses(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses, RewriterBase &rewriter) {
+  // Rewriter by default is after '*this', but we need it before '*this'.
+  rewriter.setInsertionPoint(*this);
+
+  // Rather than dropping the debug value, replace it with undef to preserve the
+  // debug local variable info. This allows the debugger to inform the user that
+  // the variable has been optimized out.
+  auto undef =
+      rewriter.create<UndefOp>(getValue().getLoc(), getValue().getType());
+  rewriter.updateRootInPlace(*this, [&] { getValueMutable().assign(undef); });
+  return DeletionKind::Keep;
+}
+
 //===----------------------------------------------------------------------===//
 // Interfaces for GEPOp
 //===----------------------------------------------------------------------===//
@@ -325,7 +349,9 @@ bool LLVM::GEPOp::canRewire(const DestructurableMemorySlot &slot,
   Type reachedType = getResultPtrElementType();
   if (!reachedType || getIndices().size() < 2)
     return false;
-  auto firstLevelIndex = cast<IntegerAttr>(getIndices()[1]);
+  auto firstLevelIndex = dyn_cast<IntegerAttr>(getIndices()[1]);
+  if (!firstLevelIndex)
+    return false;
   assert(slot.elementPtrs.contains(firstLevelIndex));
   if (!llvm::isa<LLVM::LLVMPointerType>(slot.elementPtrs.at(firstLevelIndex)))
     return false;

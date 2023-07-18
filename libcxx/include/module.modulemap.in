@@ -28,14 +28,19 @@ module std [system] {
       header "fenv.h"
       export *
     }
-    // <float.h> provided by compiler or C library.
+    module float_t {
+      header "float.h"
+      export *
+    }
     module inttypes_h {
       header "inttypes.h"
-      export stdint_h
       export *
     }
     // <iso646.h> provided by compiler.
-    // <limits.h> provided by compiler or C library.
+    module limits_h {
+      header "limits.h"
+      export *
+    }
     module locale_h {
       @requires_LIBCXX_ENABLE_LOCALIZATION@
       header "locale.h"
@@ -71,10 +76,6 @@ module std [system] {
     module stdint_h {
       header "stdint.h"
       export *
-      // FIXME: This module only exists on OS X and for some reason the
-      // wildcard above doesn't export it. Removing this breaks the tests
-      // for C compatibility headers in C++17 mode with modules enabled.
-      export Darwin.C.stdint
     }
     module stdio_h {
       // <stdio.h>'s __need_* macros require textual inclusion.
@@ -112,7 +113,6 @@ module std [system] {
   // allow their use in extern "C" contexts.
   module complex_h {
     header "complex.h"
-    export ccomplex
     export *
   }
   module tgmath_h {
@@ -128,7 +128,6 @@ module std [system] {
     }
     module ccomplex {
       header "ccomplex"
-      export complex
       export *
     }
     module cctype {
@@ -149,7 +148,6 @@ module std [system] {
     }
     module cinttypes {
       header "cinttypes"
-      export cstdint
       export *
     }
     module ciso646 {
@@ -192,7 +190,6 @@ module std [system] {
     }
     module cstdint {
       header "cstdint"
-      export depr.stdint_h
       export *
     }
     module cstdio {
@@ -209,8 +206,6 @@ module std [system] {
     }
     module ctgmath {
       header "ctgmath"
-      export ccomplex
-      export cmath
       export *
     }
     module ctime {
@@ -235,7 +230,6 @@ module std [system] {
 
   module algorithm {
     header "algorithm"
-    export initializer_list
     export *
 
     module __algorithm {
@@ -263,7 +257,10 @@ module std [system] {
       module equal_range                     { private header "__algorithm/equal_range.h" }
       module fill                            { private header "__algorithm/fill.h" }
       module fill_n                          { private header "__algorithm/fill_n.h" }
-      module find                            { private header "__algorithm/find.h" }
+      module find                            {
+        private header "__algorithm/find.h"
+        export algorithm.__algorithm.unwrap_iter
+      }
       module find_end                        { private header "__algorithm/find_end.h" }
       module find_first_of                   { private header "__algorithm/find_first_of.h" }
       module find_if                         { private header "__algorithm/find_if.h" }
@@ -324,6 +321,11 @@ module std [system] {
       module partition_point                 { private header "__algorithm/partition_point.h" }
       module pop_heap                        { private header "__algorithm/pop_heap.h" }
       module prev_permutation                { private header "__algorithm/prev_permutation.h" }
+      module pstl_any_all_none_of            { private header "__algorithm/pstl_any_all_none_of.h" }
+      module pstl_backend                    {
+        private header "__algorithm/pstl_backend.h"
+        export *
+      }
       module pstl_backends_cpu_backend       {
         private header "__algorithm/pstl_backends/cpu_backend.h"
         export *
@@ -342,17 +344,20 @@ module std [system] {
       module pstl_backends_cpu_backends_for_each {
         private header "__algorithm/pstl_backends/cpu_backends/for_each.h"
       }
+      module pstl_backends_cpu_backends_libdispatch {
+        private header "__algorithm/pstl_backends/cpu_backends/libdispatch.h"
+      }
       module pstl_backends_cpu_backends_merge {
         private header "__algorithm/pstl_backends/cpu_backends/merge.h"
       }
       module pstl_backends_cpu_backends_serial {
-        private header "__algorithm/pstl_backends/cpu_backends/serial.h"
+        private textual header "__algorithm/pstl_backends/cpu_backends/serial.h"
       }
       module pstl_backends_cpu_backends_stable_sort {
         private header "__algorithm/pstl_backends/cpu_backends/stable_sort.h"
       }
       module pstl_backends_cpu_backends_thread {
-        private header "__algorithm/pstl_backends/cpu_backends/thread.h"
+        private textual header "__algorithm/pstl_backends/cpu_backends/thread.h"
       }
       module pstl_backends_cpu_backends_transform {
         private header "__algorithm/pstl_backends/cpu_backends/transform.h"
@@ -360,6 +365,31 @@ module std [system] {
       module pstl_backends_cpu_backends_transform_reduce {
         private header "__algorithm/pstl_backends/cpu_backends/transform_reduce.h"
       }
+      module pstl_copy                       { private header "__algorithm/pstl_copy.h" }
+      module pstl_count                      { private header "__algorithm/pstl_count.h" }
+      module pstl_fill                       { private header "__algorithm/pstl_fill.h" }
+      module pstl_find                       {
+        private header "__algorithm/pstl_find.h"
+        export *
+      }
+      module pstl_for_each                   {
+        private header "__algorithm/pstl_for_each.h"
+        export algorithm.__algorithm.pstl_backend
+        export iterator.__iterator.iterator_traits
+      }
+      module pstl_frontend_dispatch          {
+        private header "__algorithm/pstl_frontend_dispatch.h"
+        export utility.__utility.forward
+      }
+      module pstl_generate                   { private header "__algorithm/pstl_generate.h" }
+      module pstl_is_partitioned             { private header "__algorithm/pstl_is_partitioned.h" }
+      module pstl_merge                      { private header "__algorithm/pstl_merge.h" }
+      module pstl_replace                    { private header "__algorithm/pstl_replace.h" }
+      module pstl_stable_sort                {
+        private header "__algorithm/pstl_stable_sort.h"
+        export functional.__functional.operations
+      }
+      module pstl_transform                  { private header "__algorithm/pstl_transform.h" }
       module push_heap                       { private header "__algorithm/push_heap.h" }
       module ranges_adjacent_find            { private header "__algorithm/ranges_adjacent_find.h" }
       module ranges_all_of                   { private header "__algorithm/ranges_all_of.h" }
@@ -670,7 +700,6 @@ module std [system] {
   }
   module array {
     header "array"
-    export initializer_list
     export *
 
     module array_fwd { private header "__fwd/array.h" }
@@ -730,8 +759,6 @@ module std [system] {
   }
   module bitset {
     header "bitset"
-    export string
-    export iosfwd
     export *
   }
   // No submodule for cassert. It fundamentally needs repeated, textual inclusion.
@@ -887,7 +914,6 @@ module std [system] {
   }
   module deque {
     header "deque"
-    export initializer_list
     export *
   }
   module exception {
@@ -992,11 +1018,11 @@ module std [system] {
       module range_formatter                 { private header "__format/range_formatter.h" }
       module unicode                         { private header "__format/unicode.h" }
       module width_estimation_table          { private header "__format/width_estimation_table.h" }
+      module write_escaped                   { private header "__format/write_escaped.h" }
     }
   }
   module forward_list {
     header "forward_list"
-    export initializer_list
     export *
   }
   module fstream {
@@ -1007,8 +1033,6 @@ module std [system] {
   }
   module functional {
     header "functional"
-    // the contents of __type_traits/unwrap_ref.h should be available from functional too.
-    export type_traits.unwrap_ref
     export *
 
     module __functional {
@@ -1073,7 +1097,6 @@ module std [system] {
   module ios {
     @requires_LIBCXX_ENABLE_LOCALIZATION@
     header "ios"
-    export iosfwd
     export *
 
     module __ios {
@@ -1095,10 +1118,6 @@ module std [system] {
   module iostream {
     @requires_LIBCXX_ENABLE_LOCALIZATION@
     header "iostream"
-    export ios
-    export streambuf
-    export istream
-    export ostream
     export *
   }
   module istream {
@@ -1198,17 +1217,21 @@ module std [system] {
   }
   module list {
     header "list"
-    export initializer_list
     export *
   }
   module locale {
     @requires_LIBCXX_ENABLE_LOCALIZATION@
     header "locale"
     export *
+
+    module __locale {
+      module locale_base_api_bsd_locale_defaults  { private textual header "__locale_dir/locale_base_api/bsd_locale_defaults.h" }
+      module locale_base_api_bsd_locale_fallbacks { private textual header "__locale_dir/locale_base_api/bsd_locale_fallbacks.h" }
+      module locale_base_api_locale_guard         { private header "__locale_dir/locale_base_api/locale_guard.h" }
+    }
   }
   module map {
     header "map"
-    export initializer_list
     export *
   }
   module mdspan {
@@ -1216,6 +1239,7 @@ module std [system] {
     export *
 
     module __mdspan {
+      module default_accessor                { private header "__mdspan/default_accessor.h" }
       module extents                         {
         private header "__mdspan/extents.h"
         export array
@@ -1327,6 +1351,11 @@ module std [system] {
       module iota                     { private header "__numeric/iota.h" }
       module midpoint                 { private header "__numeric/midpoint.h" }
       module partial_sum              { private header "__numeric/partial_sum.h" }
+      module pstl_reduce              { private header "__numeric/pstl_reduce.h" }
+      module pstl_transform_reduce    {
+        private header "__numeric/pstl_transform_reduce.h"
+        export *
+      }
       module reduce                   { private header "__numeric/reduce.h" }
       module transform_exclusive_scan { private header "__numeric/transform_exclusive_scan.h" }
       module transform_inclusive_scan { private header "__numeric/transform_inclusive_scan.h" }
@@ -1343,14 +1372,16 @@ module std [system] {
     // FIXME: should re-export ios, streambuf?
     export *
   }
+  module print {
+    header "print"
+    export *
+  }
   module queue {
     header "queue"
-    export initializer_list
     export *
   }
   module random {
     header "random"
-    export initializer_list
     export *
 
     module __random {
@@ -1404,9 +1435,6 @@ module std [system] {
   }
   module ranges {
     header "ranges"
-    export compare
-    export initializer_list
-    export iterator
     export *
 
     module __ranges {
@@ -1486,7 +1514,6 @@ module std [system] {
   module regex {
     @requires_LIBCXX_ENABLE_LOCALIZATION@
     header "regex"
-    export initializer_list
     export *
   }
   module scoped_allocator {
@@ -1500,7 +1527,6 @@ module std [system] {
   }
   module set {
     header "set"
-    export initializer_list
     export *
   }
   module shared_mutex {
@@ -1526,7 +1552,6 @@ module std [system] {
   }
   module stack {
     header "stack"
-    export initializer_list
     export *
   }
   module stdexcept {
@@ -1554,8 +1579,6 @@ module std [system] {
   }
   module string {
     header "string"
-    export initializer_list
-    export string_view
     module __string {
       module char_traits           { private header "__string/char_traits.h" }
       module constexpr_c_functions {
@@ -1604,6 +1627,7 @@ module std [system] {
 
     module __thread {
       module formatter            { private header "__thread/formatter.h" }
+      module id                   { private header "__thread/id.h" }
       module poll_with_backoff    { private header "__thread/poll_with_backoff.h" }
       module this_thread          { private header "__thread/this_thread.h" }
       module thread               { private header "__thread/thread.h" }
@@ -1722,7 +1746,10 @@ module std [system] {
       private header "__type_traits/is_equality_comparable.h"
       export integral_constant
     }
-    module is_execution_policy                       { private header "__type_traits/is_execution_policy.h" }
+    module is_execution_policy                       {
+      private header "__type_traits/is_execution_policy.h"
+      export type_traits.remove_cvref
+    }
     module is_final                                  { private header "__type_traits/is_final.h" }
     module is_floating_point                         { private header "__type_traits/is_floating_point.h" }
     module is_function                               { private header "__type_traits/is_function.h" }
@@ -1856,17 +1883,14 @@ module std [system] {
   }
   module unordered_map {
     header "unordered_map"
-    export initializer_list
     export *
   }
   module unordered_set {
     header "unordered_set"
-    export initializer_list
     export *
   }
   module utility {
     header "utility"
-    export initializer_list
     export *
 
     module __utility {
@@ -1921,7 +1945,6 @@ module std [system] {
   }
   module valarray {
     header "valarray"
-    export initializer_list
     export *
   }
   module variant {
@@ -1934,7 +1957,6 @@ module std [system] {
   }
   module vector {
     header "vector"
-    export initializer_list
     export *
   }
   module version {
@@ -1957,13 +1979,12 @@ module std [system] {
   module __std_mbstate_t     { private header "__std_mbstate_t.h"   export * }
   module __threading_support {         header "__threading_support" export * }
   module __tree              {         header "__tree"              export * }
-  module __undef_macros      {         header "__undef_macros"      export * }
+  module __undef_macros      { textual header "__undef_macros"      export * }
   module __verbose_abort     {         header "__verbose_abort"     export * }
 
   // This one needs to appear after __tree to work around issues with modules in Objective-C++ mode.
   module coroutine {
     header "coroutine"
-    export compare
     export *
 
     module __coroutine {
@@ -2040,6 +2061,10 @@ module std [system] {
     }
     module vector {
       header "experimental/vector"
+      export *
+    }
+    module __config {
+      private textual header "experimental/__config"
       export *
     }
     // FIXME these should be private
