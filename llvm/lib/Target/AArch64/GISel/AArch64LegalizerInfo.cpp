@@ -235,13 +235,27 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
        .clampScalar(1, s32, s64)
       .widenScalarToNextPow2(0);
 
-  getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FNEG})
-      .legalFor({MinFPScalar, s32, s64, v2s64, v4s32, v2s32})
-      .clampScalar(0, MinFPScalar, s64)
+  getActionDefinitionsBuilder({G_FADD, G_FSUB, G_FMUL, G_FDIV, G_FNEG, G_FABS,
+                               G_FSQRT, G_FMAXNUM, G_FMINNUM, G_FMAXIMUM,
+                               G_FMINIMUM, G_FCEIL, G_FFLOOR, G_FRINT,
+                               G_FNEARBYINT, G_INTRINSIC_TRUNC,
+                               G_INTRINSIC_ROUND, G_INTRINSIC_ROUNDEVEN})
+      .legalFor({MinFPScalar, s32, s64, v2s32, v4s32, v2s64})
+      .legalIf([=](const LegalityQuery &Query) {
+        const auto &Ty = Query.Types[0];
+        return (Ty == v8s16 || Ty == v4s16) && HasFP16;
+      })
+      .libcallFor({s128})
+      .minScalarOrElt(0, MinFPScalar)
+      .clampNumElements(0, v4s16, v8s16)
       .clampNumElements(0, v2s32, v4s32)
-      .clampNumElements(0, v2s64, v2s64);
+      .clampNumElements(0, v2s64, v2s64)
+      .moreElementsToNextPow2(0);
 
-  getActionDefinitionsBuilder(G_FREM).libcallFor({s32, s64});
+  getActionDefinitionsBuilder(G_FREM)
+      .libcallFor({s32, s64})
+      .minScalar(0, s32)
+      .scalarize(0);
 
   getActionDefinitionsBuilder({G_FMA, G_INTRINSIC_LRINT})
       // If we don't have full FP16 support, then scalarize the elements of
@@ -263,7 +277,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalFor({s16, s32, s64, v2s32, v4s32, v2s64, v2s16, v4s16, v8s16});
 
   getActionDefinitionsBuilder(
-      {G_FCOS, G_FSIN, G_FLOG10, G_FLOG, G_FLOG2, G_FEXP, G_FEXP2, G_FPOW})
+      {G_FCOS, G_FSIN, G_FPOW, G_FLOG, G_FLOG2, G_FLOG10,
+       G_FEXP, G_FEXP2, G_FEXP10})
       // We need a call for these, so we always need to scalarize.
       .scalarize(0)
       // Regardless of FP16 support, widen 16-bit elements to 32-bits.
@@ -898,7 +913,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder({G_UADDSAT, G_USUBSAT})
       .lowerIf([=](const LegalityQuery &Q) { return Q.Types[0].isScalar(); });
 
-  getActionDefinitionsBuilder({G_FSHL, G_FSHR}).lower();
+  getActionDefinitionsBuilder({G_FSHL, G_FSHR})
+      .customFor({{s32, s32}, {s32, s64}, {s64, s64}})
+      .lower();
 
   getActionDefinitionsBuilder(G_ROTR)
       .legalFor({{s32, s64}, {s64, s64}})
@@ -946,22 +963,6 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   // TODO: Vector types.
   getActionDefinitionsBuilder({G_SADDSAT, G_SSUBSAT}).lowerIf(isScalar(0));
 
-  getActionDefinitionsBuilder({G_FABS, G_FSQRT, G_FMAXNUM, G_FMINNUM, G_FMAXIMUM,
-                               G_FMINIMUM, G_FCEIL, G_FFLOOR, G_FRINT,
-                               G_FNEARBYINT, G_INTRINSIC_TRUNC,
-                               G_INTRINSIC_ROUND, G_INTRINSIC_ROUNDEVEN})
-      .legalFor({MinFPScalar, s32, s64, v2s32, v4s32, v2s64})
-      .legalIf([=](const LegalityQuery &Query) {
-        const auto &Ty = Query.Types[0];
-        return (Ty == v8s16 || Ty == v4s16) && HasFP16;
-      })
-      .libcallFor({s128})
-      .minScalarOrElt(0, MinFPScalar)
-      .clampNumElements(0, v4s16, v8s16)
-      .clampNumElements(0, v2s32, v4s32)
-      .clampNumElements(0, v2s64, v2s64)
-      .moreElementsToNextPow2(0);
-
   // TODO: Libcall support for s128.
   // TODO: s16 should be legal with full FP16 support.
   getActionDefinitionsBuilder({G_LROUND, G_LLROUND})
@@ -1003,6 +1004,9 @@ bool AArch64LegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
   case TargetOpcode::G_SBFX:
   case TargetOpcode::G_UBFX:
     return legalizeBitfieldExtract(MI, MRI, Helper);
+  case TargetOpcode::G_FSHL:
+  case TargetOpcode::G_FSHR:
+    return legalizeFunnelShift(MI, MRI, MIRBuilder, Observer, Helper);
   case TargetOpcode::G_ROTR:
     return legalizeRotate(MI, MRI, Helper);
   case TargetOpcode::G_CTPOP:
@@ -1021,6 +1025,59 @@ bool AArch64LegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
   }
 
   llvm_unreachable("expected switch to return");
+}
+
+bool AArch64LegalizerInfo::legalizeFunnelShift(MachineInstr &MI,
+                                               MachineRegisterInfo &MRI,
+                                               MachineIRBuilder &MIRBuilder,
+                                               GISelChangeObserver &Observer,
+                                               LegalizerHelper &Helper) const {
+  assert(MI.getOpcode() == TargetOpcode::G_FSHL ||
+         MI.getOpcode() == TargetOpcode::G_FSHR);
+
+  // Keep as G_FSHR if shift amount is a G_CONSTANT, else use generic
+  // lowering
+  Register ShiftNo = MI.getOperand(3).getReg();
+  LLT ShiftTy = MRI.getType(ShiftNo);
+  auto VRegAndVal = getIConstantVRegValWithLookThrough(ShiftNo, MRI);
+
+  // Adjust shift amount according to Opcode (FSHL/FSHR)
+  // Convert FSHL to FSHR
+  LLT OperationTy = MRI.getType(MI.getOperand(0).getReg());
+  APInt BitWidth(ShiftTy.getSizeInBits(), OperationTy.getSizeInBits(), false);
+
+  // Lower non-constant shifts and leave zero shifts to the optimizer.
+  if (!VRegAndVal || VRegAndVal->Value.urem(BitWidth) == 0)
+    return (Helper.lowerFunnelShiftAsShifts(MI) ==
+            LegalizerHelper::LegalizeResult::Legalized);
+
+  APInt Amount = VRegAndVal->Value.urem(BitWidth);
+
+  Amount = MI.getOpcode() == TargetOpcode::G_FSHL ? BitWidth - Amount : Amount;
+
+  // If the instruction is G_FSHR, has a 64-bit G_CONSTANT for shift amount
+  // in the range of 0 <-> BitWidth, it is legal
+  if (ShiftTy.getSizeInBits() == 64 && MI.getOpcode() == TargetOpcode::G_FSHR &&
+      VRegAndVal->Value.ult(BitWidth))
+    return true;
+
+  // Cast the ShiftNumber to a 64-bit type
+  auto Cast64 = MIRBuilder.buildConstant(LLT::scalar(64), Amount.zext(64));
+
+  if (MI.getOpcode() == TargetOpcode::G_FSHR) {
+    Observer.changingInstr(MI);
+    MI.getOperand(3).setReg(Cast64.getReg(0));
+    Observer.changedInstr(MI);
+  }
+  // If Opcode is FSHL, remove the FSHL instruction and create a FSHR
+  // instruction
+  else if (MI.getOpcode() == TargetOpcode::G_FSHL) {
+    MIRBuilder.buildInstr(TargetOpcode::G_FSHR, {MI.getOperand(0).getReg()},
+                          {MI.getOperand(1).getReg(), MI.getOperand(2).getReg(),
+                           Cast64.getReg(0)});
+    MI.eraseFromParent();
+  }
+  return true;
 }
 
 bool AArch64LegalizerInfo::legalizeRotate(MachineInstr &MI,
@@ -1117,7 +1174,7 @@ bool AArch64LegalizerInfo::legalizeSmallCMGlobalValue(
   // MO_TAGGED on the page indicates a tagged address. Set the tag now. We do so
   // by creating a MOVK that sets bits 48-63 of the register to (global address
   // + 0x100000000 - PC) >> 48. The additional 0x100000000 offset here is to
-  // prevent an incorrect tag being generated during relocation when the the
+  // prevent an incorrect tag being generated during relocation when the
   // global appears before the code section. Without the offset, a global at
   // `0x0f00'0000'0000'1000` (i.e. at `0x1000` with tag `0xf`) that's referenced
   // by code at `0x2000` would result in `0x0f00'0000'0000'1000 - 0x2000 =

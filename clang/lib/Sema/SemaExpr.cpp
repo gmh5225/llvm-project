@@ -7413,11 +7413,18 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
           Diag(FDecl->getLocation(), diag::note_callee_decl) << FDecl;
       }
     }
-    if (Caller->hasAttr<AnyX86InterruptAttr>() &&
-        ((!FDecl || !FDecl->hasAttr<AnyX86NoCallerSavedRegistersAttr>()))) {
-      Diag(Fn->getExprLoc(), diag::warn_anyx86_interrupt_regsave);
-      if (FDecl)
-        Diag(FDecl->getLocation(), diag::note_callee_decl) << FDecl;
+    if (Caller->hasAttr<AnyX86InterruptAttr>() ||
+        Caller->hasAttr<AnyX86NoCallerSavedRegistersAttr>()) {
+      const TargetInfo &TI = Context.getTargetInfo();
+      bool HasNonGPRRegisters =
+          TI.hasFeature("sse") || TI.hasFeature("x87") || TI.hasFeature("mmx");
+      if (HasNonGPRRegisters &&
+          (!FDecl || !FDecl->hasAttr<AnyX86NoCallerSavedRegistersAttr>())) {
+        Diag(Fn->getExprLoc(), diag::warn_anyx86_excessive_regsave)
+            << (Caller->hasAttr<AnyX86InterruptAttr>() ? 0 : 1);
+        if (FDecl)
+          Diag(FDecl->getLocation(), diag::note_callee_decl) << FDecl;
+      }
     }
   }
 
@@ -18352,15 +18359,17 @@ static void EvaluateAndDiagnoseImmediateInvocation(
     SemaRef.FailedImmediateInvocations.insert(CE);
     Expr *InnerExpr = CE->getSubExpr()->IgnoreImplicit();
     if (auto *FunctionalCast = dyn_cast<CXXFunctionalCastExpr>(InnerExpr))
-      InnerExpr = FunctionalCast->getSubExpr();
+      InnerExpr = FunctionalCast->getSubExpr()->IgnoreImplicit();
     FunctionDecl *FD = nullptr;
     if (auto *Call = dyn_cast<CallExpr>(InnerExpr))
       FD = cast<FunctionDecl>(Call->getCalleeDecl());
     else if (auto *Call = dyn_cast<CXXConstructExpr>(InnerExpr))
       FD = Call->getConstructor();
-    else
-      llvm_unreachable("unhandled decl kind");
-    assert(FD && FD->isImmediateFunction());
+    else if (auto *Cast = dyn_cast<CastExpr>(InnerExpr))
+      FD = dyn_cast_or_null<FunctionDecl>(Cast->getConversionFunction());
+
+    assert(FD && FD->isImmediateFunction() &&
+           "could not find an immediate function in this expression");
     SemaRef.Diag(CE->getBeginLoc(), diag::err_invalid_consteval_call)
         << FD << FD->isConsteval();
     if (auto Context =
@@ -19722,13 +19731,6 @@ bool Sema::tryCaptureVariable(
         FunctionScopesIndex == MaxFunctionScopesIndex && VarDC == DC)
       return true;
 
-    // When evaluating some attributes (like enable_if) we might refer to a
-    // function parameter appertaining to the same declaration as that
-    // attribute.
-    if (const auto *Parm = dyn_cast<ParmVarDecl>(Var);
-        Parm && Parm->getDeclContext() == DC)
-      return true;
-
     // Only block literals, captured statements, and lambda expressions can
     // capture; other scopes don't work.
     DeclContext *ParentDC =
@@ -19756,6 +19758,14 @@ bool Sema::tryCaptureVariable(
       CSI->getCapture(Var).markUsed(BuildAndDiagnose);
       break;
     }
+
+    // When evaluating some attributes (like enable_if) we might refer to a
+    // function parameter appertaining to the same declaration as that
+    // attribute.
+    if (const auto *Parm = dyn_cast<ParmVarDecl>(Var);
+        Parm && Parm->getDeclContext() == DC)
+      return true;
+
     // If we are instantiating a generic lambda call operator body,
     // we do not want to capture new variables.  What was captured
     // during either a lambdas transformation or initial parsing

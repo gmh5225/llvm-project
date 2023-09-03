@@ -114,6 +114,17 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   case VPDerivedIVSC:
   case VPPredInstPHISC:
     return false;
+  case VPInstructionSC:
+    switch (cast<VPInstruction>(this)->getOpcode()) {
+    case Instruction::ICmp:
+    case VPInstruction::Not:
+    case VPInstruction::CalculateTripCountMinusVF:
+    case VPInstruction::CanonicalIVIncrement:
+    case VPInstruction::CanonicalIVIncrementForPart:
+      return false;
+    default:
+      return true;
+    }
   case VPWidenCallSC:
     return cast<Instruction>(getVPSingleValue()->getUnderlyingValue())
         ->mayHaveSideEffects();
@@ -235,6 +246,16 @@ FastMathFlags VPRecipeWithIRFlags::getFastMathFlags() const {
   return Res;
 }
 
+VPInstruction::VPInstruction(unsigned Opcode, CmpInst::Predicate Pred,
+                             VPValue *A, VPValue *B, DebugLoc DL,
+                             const Twine &Name)
+    : VPRecipeWithIRFlags(VPDef::VPInstructionSC, ArrayRef<VPValue *>({A, B}),
+                          Pred),
+      VPValue(this), Opcode(Opcode), DL(DL), Name(Name.str()) {
+  assert(Opcode == Instruction::ICmp &&
+         "only ICmp predicates supported at the moment");
+}
+
 VPInstruction::VPInstruction(unsigned Opcode,
                              std::initializer_list<VPValue *> Operands,
                              FastMathFlags FMFs, DebugLoc DL, const Twine &Name)
@@ -260,10 +281,10 @@ Value *VPInstruction::generateInstruction(VPTransformState &State,
     Value *A = State.get(getOperand(0), Part);
     return Builder.CreateNot(A, Name);
   }
-  case VPInstruction::ICmpULE: {
-    Value *IV = State.get(getOperand(0), Part);
-    Value *TC = State.get(getOperand(1), Part);
-    return Builder.CreateICmpULE(IV, TC, Name);
+  case Instruction::ICmp: {
+    Value *A = State.get(getOperand(0), Part);
+    Value *B = State.get(getOperand(1), Part);
+    return Builder.CreateCmp(getPredicate(), A, B, Name);
   }
   case Instruction::Select: {
     Value *Cond = State.get(getOperand(0), Part);
@@ -432,9 +453,6 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
   switch (getOpcode()) {
   case VPInstruction::Not:
     O << "not";
-    break;
-  case VPInstruction::ICmpULE:
-    O << "icmp ule";
     break;
   case VPInstruction::SLPLoad:
     O << "combined load";
@@ -607,6 +625,9 @@ VPRecipeWithIRFlags::FastMathFlagsTy::FastMathFlagsTy(
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPRecipeWithIRFlags::printFlags(raw_ostream &O) const {
   switch (OpType) {
+  case OperationType::Cmp:
+    O << " " << CmpInst::getPredicateName(getPredicate());
+    break;
   case OperationType::PossiblyExactOp:
     if (ExactFlags.IsExact)
       O << " exact";
@@ -730,8 +751,6 @@ void VPWidenRecipe::print(raw_ostream &O, const Twine &Indent,
   const Instruction *UI = getUnderlyingInstr();
   O << " = " << UI->getOpcodeName();
   printFlags(O);
-  if (auto *Cmp = dyn_cast<CmpInst>(UI))
-    O << Cmp->getPredicate() << " ";
   printOperands(O, SlotTracker);
 }
 #endif

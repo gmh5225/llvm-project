@@ -58,6 +58,8 @@ Changes to the LLVM IR
   * ``and``
   * ``or``
 
+* Added `llvm.exp10` intrinsic.
+
 Changes to LLVM infrastructure
 ------------------------------
 
@@ -80,6 +82,8 @@ Changes to the AMDGPU Backend
   for raw instruction access.
 
 * Implemented `llvm.stacksave` and `llvm.stackrestore` intrinsics.
+
+* Implemented :ref:`llvm.get.rounding <int_get_rounding>`
 
 Changes to the ARM Backend
 --------------------------
@@ -160,6 +164,9 @@ Changes to the Debug Info
 Changes to the LLVM tools
 ---------------------------------
 
+* llvm-symbolizer now treats invalid input as an address for which source
+  information is not found.
+
 Changes to LLDB
 ---------------------------------
 
@@ -180,6 +187,13 @@ Other Changes
   deprecated. There is a script and instructions on how to resolve conflicts -
   see https://reviews.llvm.org/D157150 and https://reviews.llvm.org/D157151 for
   details.
+
+* On Linux, FreeBSD, and NetBSD, setting the environment variable
+  ``LLVM_ENABLE_SYMBOLIZER_MARKUP`` causes tools to print stacktraces using
+  :doc:`Symbolizer Markup <SymbolizerMarkupFormat>`.
+  This works even if the tools have no embedded symbol information (i.e. are
+  fully stripped); :doc:`llvm-symbolizer <CommandGuide/llvm-symbolizer>` can
+  symbolize the markup afterwards using ``debuginfod``.
 
 External Open Source Projects Using LLVM 15
 ===========================================

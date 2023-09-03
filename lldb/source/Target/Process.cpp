@@ -89,7 +89,7 @@ using namespace std::chrono;
 class ProcessOptionValueProperties
     : public Cloneable<ProcessOptionValueProperties, OptionValueProperties> {
 public:
-  ProcessOptionValueProperties(ConstString name) : Cloneable(name) {}
+  ProcessOptionValueProperties(llvm::StringRef name) : Cloneable(name) {}
 
   const Property *
   GetPropertyAtIndex(size_t idx,
@@ -146,8 +146,7 @@ class ProcessExperimentalOptionValueProperties
                        OptionValueProperties> {
 public:
   ProcessExperimentalOptionValueProperties()
-      : Cloneable(
-            ConstString(Properties::GetExperimentalSettingsName())) {}
+      : Cloneable(Properties::GetExperimentalSettingsName()) {}
 };
 
 ProcessExperimentalProperties::ProcessExperimentalProperties()
@@ -162,8 +161,7 @@ ProcessProperties::ProcessProperties(lldb_private::Process *process)
 {
   if (process == nullptr) {
     // Global process properties, set them up one time
-    m_collection_sp =
-        std::make_shared<ProcessOptionValueProperties>(ConstString("process"));
+    m_collection_sp = std::make_shared<ProcessOptionValueProperties>("process");
     m_collection_sp->Initialize(g_process_properties);
     m_collection_sp->AppendProperty(
         "thread", "Settings specific to threads.", true,
@@ -435,7 +433,7 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp,
           Listener::MakeListener("lldb.process.internal_state_listener")),
       m_mod_id(), m_process_unique_id(0), m_thread_index_id(0),
       m_thread_id_to_index_id_map(), m_exit_status(-1), m_exit_string(),
-      m_exit_status_mutex(), m_thread_list_real(this),
+      m_exit_status_mutex(), m_thread_mutex(), m_thread_list_real(this),
       m_thread_list(this), m_thread_plans(*this), m_extended_thread_list(this),
       m_extended_thread_stop_id(0), m_queue_list(this), m_queue_list_stop_id(0),
       m_notifications(), m_image_tokens(),
@@ -2455,7 +2453,7 @@ Process::WaitForProcessStopPrivate(EventSP &event_sp,
 }
 
 void Process::LoadOperatingSystemPlugin(bool flush) {
-  std::lock_guard<std::recursive_mutex> guard(GetThreadList().GetMutex());
+  std::lock_guard<std::recursive_mutex> guard(m_thread_mutex);
   if (flush)
     m_thread_list.Clear();
   m_os_up.reset(OperatingSystem::FindPlugin(this, nullptr));

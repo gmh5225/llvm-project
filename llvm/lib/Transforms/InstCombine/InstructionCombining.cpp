@@ -544,10 +544,10 @@ bool InstCombinerImpl::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
            BinaryOperator::Create(Opcode, A, B);
 
          if (isa<FPMathOperator>(NewBO)) {
-          FastMathFlags Flags = I.getFastMathFlags();
-          Flags &= Op0->getFastMathFlags();
-          Flags &= Op1->getFastMathFlags();
-          NewBO->setFastMathFlags(Flags);
+           FastMathFlags Flags = I.getFastMathFlags() &
+                                 Op0->getFastMathFlags() &
+                                 Op1->getFastMathFlags();
+           NewBO->setFastMathFlags(Flags);
         }
         InsertNewInstWith(NewBO, I);
         NewBO->takeName(Op1);
@@ -1327,6 +1327,21 @@ Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
     // If vectors, verify that they have the same number of elements.
     if (SrcTy && SrcTy->getElementCount() != DestTy->getElementCount())
       return nullptr;
+  }
+
+  // Test if a FCmpInst instruction is used exclusively by a select as
+  // part of a minimum or maximum operation. If so, refrain from doing
+  // any other folding. This helps out other analyses which understand
+  // non-obfuscated minimum and maximum idioms. And in this case, at
+  // least one of the comparison operands has at least one user besides
+  // the compare (the select), which would often largely negate the
+  // benefit of folding anyway.
+  if (auto *CI = dyn_cast<FCmpInst>(SI->getCondition())) {
+    if (CI->hasOneUse()) {
+      Value *Op0 = CI->getOperand(0), *Op1 = CI->getOperand(1);
+      if ((TV == Op0 && FV == Op1) || (FV == Op0 && TV == Op1))
+        return nullptr;
+    }
   }
 
   // Make sure that one of the select arms constant folds successfully.
@@ -3602,7 +3617,7 @@ Instruction *InstCombinerImpl::foldFreezeIntoRecurrence(FreezeInst &FI,
   Value *StartV = StartU->get();
   BasicBlock *StartBB = PN->getIncomingBlock(*StartU);
   bool StartNeedsFreeze = !isGuaranteedNotToBeUndefOrPoison(StartV);
-  // We can't insert freeze if the the start value is the result of the
+  // We can't insert freeze if the start value is the result of the
   // terminator (e.g. an invoke).
   if (StartNeedsFreeze && StartBB->getTerminator() == StartV)
     return nullptr;

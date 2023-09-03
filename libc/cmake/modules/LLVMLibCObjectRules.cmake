@@ -21,7 +21,12 @@ function(_get_common_compile_options output_var flags)
   set(compile_options ${LIBC_COMPILE_OPTIONS_DEFAULT} ${ARGN})
   if(LLVM_COMPILER_IS_GCC_COMPATIBLE)
     list(APPEND compile_options "-fpie")
-    list(APPEND compile_options "-ffreestanding")
+
+    if(LLVM_LIBC_FULL_BUILD)
+      # Only add -ffreestanding flag in full build mode.
+      list(APPEND compile_options "-ffreestanding")
+    endif()
+
     list(APPEND compile_options "-fno-builtin")
     list(APPEND compile_options "-fno-exceptions")
     list(APPEND compile_options "-fno-lax-vector-conversions")
@@ -103,6 +108,10 @@ function(get_nvptx_compile_options output_var gpu_arch)
   elseif(${gpu_arch} STREQUAL "sm_80")
     list(APPEND nvptx_options "--cuda-feature=+ptx72")
   elseif(${gpu_arch} STREQUAL "sm_86")
+    list(APPEND nvptx_options "--cuda-feature=+ptx72")
+  elseif(${gpu_arch} STREQUAL "sm_89")
+    list(APPEND nvptx_options "--cuda-feature=+ptx72")
+  elseif(${gpu_arch} STREQUAL "sm_90")
     list(APPEND nvptx_options "--cuda-feature=+ptx72")
   else()
     message(FATAL_ERROR "Unknown Nvidia GPU architecture '${gpu_arch}'")
@@ -355,9 +364,8 @@ function(create_object_library fq_target_name)
     target_include_directories(
       ${fq_target_name}
       PRIVATE
-        ${LIBC_BUILD_DIR}/include
         ${LIBC_SOURCE_DIR}
-        ${LIBC_BUILD_DIR}
+        ${LIBC_INCLUDE_DIR}
     )
     target_compile_options(${fq_target_name} PRIVATE ${compile_options})
   endif()
