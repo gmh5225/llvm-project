@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
@@ -2717,6 +2718,13 @@ void CombinerHelper::replaceInstWithConstant(MachineInstr &MI, APInt C) {
   MI.eraseFromParent();
 }
 
+void CombinerHelper::replaceInstWithFConstant(MachineInstr &MI, ConstantFP *CFP) {
+  assert(MI.getNumDefs() == 1 && "Expected only one def?");
+  Builder.setInstr(MI);
+  Builder.buildFConstant(MI.getOperand(0), CFP->getValueAPF());
+  MI.eraseFromParent();
+}
+
 void CombinerHelper::replaceInstWithUndef(MachineInstr &MI) {
   assert(MI.getNumDefs() == 1 && "Expected only one def?");
   Builder.setInstr(MI);
@@ -4600,6 +4608,42 @@ bool CombinerHelper::matchConstantFoldBinOp(MachineInstr &MI, APInt &MatchInfo) 
   if (!MaybeCst)
     return false;
   MatchInfo = *MaybeCst;
+  return true;
+}
+
+bool CombinerHelper::matchConstantFoldFPBinOp(MachineInstr &MI, ConstantFP* &MatchInfo) {
+  Register Op1 = MI.getOperand(1).getReg();
+  Register Op2 = MI.getOperand(2).getReg();
+  auto MaybeCst = ConstantFoldFPBinOp(MI.getOpcode(), Op1, Op2, MRI);
+  if (!MaybeCst)
+    return false;
+  MatchInfo =
+      ConstantFP::get(MI.getMF()->getFunction().getContext(), *MaybeCst);
+  return true;
+}
+
+bool CombinerHelper::matchConstantFoldFMA(MachineInstr &MI,
+                                          ConstantFP *&MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_FMA ||
+         MI.getOpcode() == TargetOpcode::G_FMAD);
+  auto [_, Op1, Op2, Op3] = MI.getFirst4Regs();
+
+  const ConstantFP *Op3Cst = getConstantFPVRegVal(Op3, MRI);
+  if (!Op3Cst)
+    return false;
+
+  const ConstantFP *Op2Cst = getConstantFPVRegVal(Op2, MRI);
+  if (!Op2Cst)
+    return false;
+
+  const ConstantFP *Op1Cst = getConstantFPVRegVal(Op1, MRI);
+  if (!Op1Cst)
+    return false;
+
+  APFloat Op1F = Op1Cst->getValueAPF();
+  Op1F.fusedMultiplyAdd(Op2Cst->getValueAPF(), Op3Cst->getValueAPF(),
+                        APFloat::rmNearestTiesToEven);
+  MatchInfo = ConstantFP::get(MI.getMF()->getFunction().getContext(), Op1F);
   return true;
 }
 

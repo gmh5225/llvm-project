@@ -692,6 +692,12 @@ def OperandZeroAndResultHaveSameRank :
   let results = (outs AnyShaped:$res);
 }
 
+def OperandsAndResultHaveSameRank :
+    TEST_Op<"operands_and_result_have_same_rank", [SameOperandsAndResultRank]> {
+  let arguments = (ins AnyShaped:$x, AnyShaped:$y);
+  let results = (outs AnyShaped:$res);
+}
+
 def OperandZeroAndResultHaveSameShape :
     TEST_Op<"operand0_and_result_have_same_shape",
             [AllShapesMatch<["x", "res"]>]> {
@@ -2936,6 +2942,18 @@ def TestCallOnDeviceOp : TEST_Op<"call_on_device",
 }
 
 def TestStoreWithARegion : TEST_Op<"store_with_a_region",
+    [DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+     SingleBlock]> {
+  let arguments = (ins
+    Arg<AnyMemRef, "", [MemWrite]>:$address,
+    BoolAttr:$store_before_region
+  );
+  let regions = (region AnyRegion:$body);
+  let assemblyFormat =
+    "$address attr-dict-with-keyword regions `:` type($address)";
+}
+
+def TestStoreWithALoopRegion : TEST_Op<"store_with_a_loop_region",
     [DeclareOpInterfaceMethods<RegionBranchOpInterface>,
      SingleBlock]> {
   let arguments = (ins
