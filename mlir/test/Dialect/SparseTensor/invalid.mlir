@@ -32,7 +32,7 @@ func.func @invalid_pack_type(%values: tensor<6xf64>, %pos: tensor<2xi32>, %coord
 
 // -----
 
-#SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed_nu", "singleton"], posWidth=32, crdWidth=32}>
+#SparseVector = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton), posWidth=32, crdWidth=32}>
 
 func.func @invalid_pack_type(%values: tensor<6xf64>, %pos: tensor<2xi32>, %coordinates: tensor<6x3xi32>)
                             -> tensor<100x2xf64, #SparseVector> {
@@ -68,7 +68,7 @@ func.func @invalid_unpack_type(%sp: tensor<100xf32, #SparseVector>, %values: ten
 
 // -----
 
-#SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed_nu", "singleton"], posWidth=32, crdWidth=32}>
+#SparseVector = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton), posWidth=32, crdWidth=32}>
 
 func.func @invalid_unpack_type(%sp: tensor<100x2xf64, #SparseVector>, %values: tensor<6xf64>, %pos: tensor<2xi32>, %coordinates: tensor<6x3xi32>) {
   // expected-error@+1 {{input/output trailing COO level-ranks don't match}}
@@ -270,7 +270,7 @@ func.func @sparse_get_md(%arg0: !sparse_tensor.storage_specifier<#SparseVector>)
 
 // -----
 
-#COO = #sparse_tensor.encoding<{lvlTypes = ["compressed_nu", "singleton"]}>
+#COO = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : compressed(nonunique), d1 : singleton)}>
 
 func.func @sparse_get_md(%arg0: !sparse_tensor.storage_specifier<#COO>) -> index {
   // expected-error@+1 {{requested position memory size on a singleton level}}
@@ -658,7 +658,7 @@ func.func @invalid_concat_dim(%arg0: tensor<2x4xf64, #DC>,
 
 #C = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed)}>
 #DC = #sparse_tensor.encoding<{map = (d0, d1) -> (d0 : dense, d1 : compressed)}>
-#DCC = #sparse_tensor.encoding<{lvlTypes = ["dense", "compressed", "compressed"]}>
+#DCC = #sparse_tensor.encoding<{map = (d0, d1, d2) -> (d0 : dense, d1 : compressed, d2 : compressed)}>
 func.func @invalid_concat_rank_mismatch(%arg0: tensor<2xf64, #C>,
                                         %arg1: tensor<3x4xf64, #DC>,
                                         %arg2: tensor<4x4x4xf64, #DCC>) -> tensor<9x4xf64, #DC> {
@@ -790,56 +790,47 @@ func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>, %arg1: f32) -> (
   return
 }
 
-// -----
-
-// TODO: a test case with empty xs doesn't work due to some parser issues.
-
-func.func @sparse_sort_x_type( %arg0: index, %arg1: memref<?xf32>) {
-  // expected-error@+1 {{operand #1 must be 1D memref of integer or index values}}
-  sparse_tensor.sort hybrid_quick_sort %arg0, %arg1: memref<?xf32>
-}
 
 // -----
 
-func.func @sparse_sort_dim_too_small(%arg0: memref<10xindex>) {
-  %i20 = arith.constant 20 : index
-  // expected-error@+1 {{xs and ys need to have a dimension >= n: 10 < 20}}
-  sparse_tensor.sort insertion_sort_stable %i20, %arg0 : memref<10xindex>
-  return
-}
-
-// -----
-
-func.func @sparse_sort_mismatch_x_type(%arg0: index, %arg1: memref<10xindex>, %arg2: memref<10xi8>) {
-  // expected-error@+1 {{mismatch xs element types}}
-  sparse_tensor.sort hybrid_quick_sort %arg0, %arg1, %arg2 : memref<10xindex>, memref<10xi8>
-  return
-}
-
-// -----
+#MAP = affine_map<(i,j) -> (i,j)>
 
 func.func @sparse_sort_coo_x_type( %arg0: index, %arg1: memref<?xf32>) {
   // expected-error@+1 {{operand #1 must be 1D memref of integer or index values}}
-  sparse_tensor.sort_coo insertion_sort_stable %arg0, %arg1: memref<?xf32>
+  sparse_tensor.sort_coo insertion_sort_stable %arg0, %arg1 {perm_map = #MAP} : memref<?xf32>
   return
 }
 
 // -----
+
+#MAP = affine_map<(i,j) -> (i,j)>
 
 func.func @sparse_sort_coo_x_too_small(%arg0: memref<50xindex>) {
   %i20 = arith.constant 20 : index
-  // expected-error@+1 {{Expected dimension(xy) >= n * (nx + ny) got 50 < 60}}
-  sparse_tensor.sort_coo hybrid_quick_sort %i20, %arg0 {nx = 2 : index, ny = 1 : index} : memref<50xindex>
+  // expected-error@+1 {{Expected dimension(xy) >= n * (rank(perm_map) + ny) got 50 < 60}}
+  sparse_tensor.sort_coo hybrid_quick_sort %i20, %arg0 {perm_map = #MAP, ny = 1 : index} : memref<50xindex>
   return
 }
 
 // -----
+
+#MAP = affine_map<(i,j) -> (i,j)>
 
 func.func @sparse_sort_coo_y_too_small(%arg0: memref<60xindex>, %arg1: memref<10xf32>) {
   %i20 = arith.constant 20 : index
   // expected-error@+1 {{Expected dimension(y) >= n got 10 < 20}}
-  sparse_tensor.sort_coo insertion_sort_stable %i20, %arg0 jointly %arg1 {nx = 2 : index, ny = 1 : index} : memref<60xindex> jointly memref<10xf32>
+  sparse_tensor.sort_coo insertion_sort_stable %i20, %arg0 jointly %arg1 {perm_map = #MAP, ny = 1 : index} : memref<60xindex> jointly memref<10xf32>
   return
+}
+
+// -----
+
+#NON_PERM_MAP = affine_map<(i,j) -> (i,i)>
+
+func.func @sparse_sort_coo_no_perm(%arg0: index, %arg1: memref<?xindex>) -> (memref<?xindex>) {
+  // expected-error@+1 {{Expected a permutation map, got (d0, d1) -> (d0, d0)}}
+  sparse_tensor.sort_coo hybrid_quick_sort %arg0, %arg1 {perm_map = #NON_PERM_MAP, ny = 1 : index}: memref<?xindex>
+  return %arg1 : memref<?xindex>
 }
 
 // -----
