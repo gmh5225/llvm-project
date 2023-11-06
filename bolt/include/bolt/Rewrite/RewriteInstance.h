@@ -509,11 +509,11 @@ private:
   };
 
   /// AArch64 PLT sections.
-  const PLTSectionInfo AArch64_PLTSections[3] = {
-      {".plt"}, {".iplt"}, {nullptr}};
+  const PLTSectionInfo AArch64_PLTSections[4] = {
+      {".plt"}, {".plt.got"}, {".iplt"}, {nullptr}};
 
   /// RISCV PLT sections.
-  const PLTSectionInfo RISCV_PLTSections[3] = {{".plt"}, {nullptr}};
+  const PLTSectionInfo RISCV_PLTSections[2] = {{".plt"}, {nullptr}};
 
   /// Return PLT information for a section with \p SectionName or nullptr
   /// if the section is not PLT.
@@ -584,7 +584,8 @@ private:
 MCPlusBuilder *createMCPlusBuilder(const Triple::ArchType Arch,
                                    const MCInstrAnalysis *Analysis,
                                    const MCInstrInfo *Info,
-                                   const MCRegisterInfo *RegInfo);
+                                   const MCRegisterInfo *RegInfo,
+                                   const MCSubtargetInfo *STI);
 
 } // namespace bolt
 } // namespace llvm

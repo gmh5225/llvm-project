@@ -219,6 +219,14 @@ public:
 
   unsigned ModulesValidateDiagnosticOptions : 1;
 
+  /// Whether to entirely skip writing diagnostic options.
+  /// Primarily used to speed up deserialization during dependency scanning.
+  unsigned ModulesSkipDiagnosticOptions : 1;
+
+  /// Whether to entirely skip writing header search paths.
+  /// Primarily used to speed up deserialization during dependency scanning.
+  unsigned ModulesSkipHeaderSearchPaths : 1;
+
   unsigned ModulesHashContent : 1;
 
   /// Whether we should include all things that could impact the module in the
@@ -238,7 +246,9 @@ public:
         ModulesValidateSystemHeaders(false),
         ValidateASTInputFilesContent(false),
         ForceCheckCXX20ModulesInputFiles(false), UseDebugInfo(false),
-        ModulesValidateDiagnosticOptions(true), ModulesHashContent(false),
+        ModulesValidateDiagnosticOptions(true),
+        ModulesSkipDiagnosticOptions(false),
+        ModulesSkipHeaderSearchPaths(false), ModulesHashContent(false),
         ModulesStrictContextHash(false) {}
 
   /// AddPath - Add the \p Path path to the specified \p Group list.
@@ -267,8 +277,8 @@ inline llvm::hash_code hash_value(const HeaderSearchOptions::Entry &E) {
   return llvm::hash_combine(E.Path, E.Group, E.IsFramework, E.IgnoreSysRoot);
 }
 
-template <typename HasherT, llvm::support::endianness Endianness>
-inline void addHash(llvm::HashBuilderImpl<HasherT, Endianness> &HBuilder,
+template <typename HasherT, llvm::endianness Endianness>
+inline void addHash(llvm::HashBuilder<HasherT, Endianness> &HBuilder,
                     const HeaderSearchOptions::Entry &E) {
   HBuilder.add(E.Path, E.Group, E.IsFramework, E.IgnoreSysRoot);
 }
@@ -278,8 +288,8 @@ hash_value(const HeaderSearchOptions::SystemHeaderPrefix &SHP) {
   return llvm::hash_combine(SHP.Prefix, SHP.IsSystemHeader);
 }
 
-template <typename HasherT, llvm::support::endianness Endianness>
-inline void addHash(llvm::HashBuilderImpl<HasherT, Endianness> &HBuilder,
+template <typename HasherT, llvm::endianness Endianness>
+inline void addHash(llvm::HashBuilder<HasherT, Endianness> &HBuilder,
                     const HeaderSearchOptions::SystemHeaderPrefix &SHP) {
   HBuilder.add(SHP.Prefix, SHP.IsSystemHeader);
 }

@@ -31,6 +31,21 @@
 
 using namespace __hwasan;
 
+struct HWAsanInterceptorContext {
+  const char *interceptor_name;
+};
+
+#  define ACCESS_MEMORY_RANGE(ctx, offset, size, access)                    \
+    do {                                                                    \
+      __hwasan::CheckAddressSized<ErrorAction::Abort, access>((uptr)offset, \
+                                                              size);        \
+    } while (0)
+
+#  define HWASAN_READ_RANGE(ctx, offset, size) \
+    ACCESS_MEMORY_RANGE(ctx, offset, size, AccessType::Load)
+#  define HWASAN_WRITE_RANGE(ctx, offset, size) \
+    ACCESS_MEMORY_RANGE(ctx, offset, size, AccessType::Store)
+
 #  if !SANITIZER_APPLE
 #    define HWASAN_INTERCEPT_FUNC(name)                                        \
       do {                                                                     \
@@ -75,17 +90,14 @@ using namespace __hwasan;
 #    include "sanitizer_common/sanitizer_syscalls_netbsd.inc"
 
 #    define COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ptr, size) \
-      do {                                                 \
-      } while (false)
+      HWASAN_WRITE_RANGE(ctx, ptr, size)
 
 #    define COMMON_INTERCEPTOR_READ_RANGE(ctx, ptr, size) \
-      do {                                                \
-        (void)(ctx);                                      \
-        (void)(ptr);                                      \
-        (void)(size);                                     \
-      } while (false)
+      HWASAN_READ_RANGE(ctx, ptr, size)
 
 #    define COMMON_INTERCEPTOR_ENTER(ctx, func, ...) \
+      HWAsanInterceptorContext _ctx = {#func};       \
+      ctx = (void *)&_ctx;                           \
       do {                                           \
         (void)(ctx);                                 \
         (void)(func);                                \
@@ -132,22 +144,6 @@ using namespace __hwasan;
 #    define COMMON_INTERCEPTOR_BLOCK_REAL(name) \
       do {                                      \
         (void)(name);                           \
-      } while (false)
-
-#    define COMMON_INTERCEPTOR_MEMMOVE_IMPL(ctx, to, from, size) \
-      do {                                                       \
-        (void)(ctx);                                             \
-        (void)(to);                                              \
-        (void)(from);                                            \
-        (void)(size);                                            \
-      } while (false)
-
-#    define COMMON_INTERCEPTOR_MEMCPY_IMPL(ctx, to, from, size) \
-      do {                                                      \
-        (void)(ctx);                                            \
-        (void)(to);                                             \
-        (void)(from);                                           \
-        (void)(size);                                           \
       } while (false)
 
 #    define COMMON_INTERCEPTOR_MEMSET_IMPL(ctx, block, c, size) \
@@ -309,9 +305,9 @@ INTERCEPTOR(int, pthread_detach, void *thread) {
   return result;
 }
 
-INTERCEPTOR(int, pthread_exit, void *retval) {
+INTERCEPTOR(void, pthread_exit, void *retval) {
   hwasanThreadArgRetval().Finish(GetThreadSelf(), retval);
-  return REAL(pthread_exit)(retval);
+  REAL(pthread_exit)(retval);
 }
 
 #    if SANITIZER_GLIBC
