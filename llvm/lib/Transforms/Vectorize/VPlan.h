@@ -826,6 +826,7 @@ class VPRecipeWithIRFlags : public VPRecipeBase {
   enum class OperationType : unsigned char {
     Cmp,
     OverflowingBinOp,
+    DisjointOp,
     PossiblyExactOp,
     GEPOp,
     FPMathOp,
@@ -842,6 +843,9 @@ public:
   };
 
 private:
+  struct DisjointFlagsTy {
+    char IsDisjoint : 1;
+  };
   struct ExactFlagsTy {
     char IsExact : 1;
   };
@@ -868,6 +872,7 @@ private:
   union {
     CmpInst::Predicate CmpPredicate;
     WrapFlagsTy WrapFlags;
+    DisjointFlagsTy DisjointFlags;
     ExactFlagsTy ExactFlags;
     GEPFlagsTy GEPFlags;
     NonNegFlagsTy NonNegFlags;
@@ -889,6 +894,9 @@ public:
     if (auto *Op = dyn_cast<CmpInst>(&I)) {
       OpType = OperationType::Cmp;
       CmpPredicate = Op->getPredicate();
+    } else if (auto *Op = dyn_cast<PossiblyDisjointInst>(&I)) {
+      OpType = OperationType::DisjointOp;
+      DisjointFlags.IsDisjoint = Op->isDisjoint();
     } else if (auto *Op = dyn_cast<OverflowingBinaryOperator>(&I)) {
       OpType = OperationType::OverflowingBinOp;
       WrapFlags = {Op->hasNoUnsignedWrap(), Op->hasNoSignedWrap()};
@@ -942,6 +950,9 @@ public:
       WrapFlags.HasNUW = false;
       WrapFlags.HasNSW = false;
       break;
+    case OperationType::DisjointOp:
+      DisjointFlags.IsDisjoint = false;
+      break;
     case OperationType::PossiblyExactOp:
       ExactFlags.IsExact = false;
       break;
@@ -967,6 +978,9 @@ public:
     case OperationType::OverflowingBinOp:
       I->setHasNoUnsignedWrap(WrapFlags.HasNUW);
       I->setHasNoSignedWrap(WrapFlags.HasNSW);
+      break;
+    case OperationType::DisjointOp:
+      cast<PossiblyDisjointInst>(I)->setIsDisjoint(DisjointFlags.IsDisjoint);
       break;
     case OperationType::PossiblyExactOp:
       I->setIsExact(ExactFlags.IsExact);
@@ -1044,9 +1058,7 @@ public:
     SLPStore,
     ActiveLaneMask,
     CalculateTripCountMinusVF,
-    CanonicalIVIncrement,
-    // The next op is similar to the above, but instead increment the
-    // canonical IV separately for each unrolled part.
+    // Increment the canonical IV separately for each unrolled part.
     CanonicalIVIncrementForPart,
     BranchOnCount,
     BranchOnCond
@@ -1154,8 +1166,22 @@ public:
       return false;
     case VPInstruction::ActiveLaneMask:
     case VPInstruction::CalculateTripCountMinusVF:
-    case VPInstruction::CanonicalIVIncrement:
     case VPInstruction::CanonicalIVIncrementForPart:
+    case VPInstruction::BranchOnCount:
+      return true;
+    };
+    llvm_unreachable("switch should return");
+  }
+
+  /// Returns true if the recipe only uses the first part of operand \p Op.
+  bool onlyFirstPartUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    if (getOperand(0) != Op)
+      return false;
+    switch (getOpcode()) {
+    default:
+      return false;
     case VPInstruction::BranchOnCount:
       return true;
     };
@@ -2112,6 +2138,13 @@ public:
     return true;
   }
 
+  /// Returns true if the recipe only uses the first part of operand \p Op.
+  bool onlyFirstPartUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    return true;
+  }
+
   /// Check if the induction described by \p Kind, /p Start and \p Step is
   /// canonical, i.e.  has the same start, step (of 1), and type as the
   /// canonical IV.
@@ -2531,6 +2564,9 @@ class VPlan {
   /// Represents the vector trip count.
   VPValue VectorTripCount;
 
+  /// Represents the loop-invariant VF * UF of the vector loop region.
+  VPValue VFxUF;
+
   /// Holds a mapping between Values and their corresponding VPValue inside
   /// VPlan.
   Value2VPValueTy Value2VPValue;
@@ -2609,6 +2645,9 @@ public:
 
   /// The vector trip count.
   VPValue &getVectorTripCount() { return VectorTripCount; }
+
+  /// Returns VF * UF of the vector loop region.
+  VPValue &getVFxUF() { return VFxUF; }
 
   /// Mark the plan to indicate that using Value2VPValue is not safe any
   /// longer, because it may be stale.
@@ -3039,6 +3078,9 @@ namespace vputils {
 
 /// Returns true if only the first lane of \p Def is used.
 bool onlyFirstLaneUsed(VPValue *Def);
+
+/// Returns true if only the first part of \p Def is used.
+bool onlyFirstPartUsed(VPValue *Def);
 
 /// Get or create a VPValue that corresponds to the expansion of \p Expr. If \p
 /// Expr is a SCEVConstant or SCEVUnknown, return a VPValue wrapping the live-in
