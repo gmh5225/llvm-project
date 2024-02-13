@@ -116,6 +116,9 @@ def : GINodeEquiv<G_INTRINSIC, intrinsic_wo_chain> {
   let IfConvergent = G_INTRINSIC_CONVERGENT;
 }
 
+def : GINodeEquiv<G_GET_FPENV, get_fpenv>;
+def : GINodeEquiv<G_SET_FPENV, set_fpenv>;
+def : GINodeEquiv<G_RESET_FPENV, reset_fpenv>;
 def : GINodeEquiv<G_GET_FPMODE, get_fpmode>;
 def : GINodeEquiv<G_SET_FPMODE, set_fpmode>;
 def : GINodeEquiv<G_RESET_FPMODE, reset_fpmode>;
@@ -127,6 +130,7 @@ let IfConvergent = G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS in {
 }
 
 def : GINodeEquiv<G_BR, br>;
+def : GINodeEquiv<G_BRCOND, brcond>;
 def : GINodeEquiv<G_BSWAP, bswap>;
 def : GINodeEquiv<G_BITREVERSE, bitreverse>;
 def : GINodeEquiv<G_FSHL, fshl>;
