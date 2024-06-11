@@ -13,7 +13,6 @@ import os
 
 class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
     @skipIfWindows
-    @skipIfRemote
     def test_default(self):
         """
         Tests the default launch of a simple program. No arguments,
@@ -29,7 +28,6 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         self.assertIn(program, lines[0], "make sure program path is in first argument")
 
     @skipIfWindows
-    @skipIfRemote
     def test_termination(self):
         """
         Tests the correct termination of lldb-dap upon a 'disconnect'
@@ -44,13 +42,12 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         self.dap_server.request_disconnect()
 
         # Wait until the underlying lldb-dap process dies.
-        self.dap_server.process.wait(timeout=10)
+        self.dap_server.process.wait(timeout=lldbdap_testcase.DAPTestCaseBase.timeoutval)
 
         # Check the return code
         self.assertEqual(self.dap_server.process.poll(), 0)
 
     @skipIfWindows
-    @skipIfRemote
     def test_stopOnEntry(self):
         """
         Tests the default launch of a simple program that stops at the
@@ -70,7 +67,6 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
                     )
 
     @skipIfWindows
-    @skipIfRemote
     def test_cwd(self):
         """
         Tests the default launch of a simple program with a current working
@@ -97,7 +93,6 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         self.assertTrue(found, "verified program working directory")
 
     @skipIfWindows
-    @skipIfRemote
     def test_debuggerRoot(self):
         """
         Tests the "debuggerRoot" will change the working directory of
@@ -127,7 +122,6 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_exit()
 
     @skipIfWindows
-    @skipIfRemote
     def test_sourcePath(self):
         """
         Tests the "sourcePath" will set the target.source-map.
@@ -153,7 +147,6 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_exit()
 
     @skipIfWindows
-    @skipIfRemote
     def test_disableSTDIO(self):
         """
         Tests the default launch of a simple program with STDIO disabled.
@@ -168,7 +161,6 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
     @skipIfWindows
     @skipIfLinux  # shell argument expansion doesn't seem to work on Linux
     @expectedFailureAll(oslist=["freebsd", "netbsd"], bugnumber="llvm.org/pr48349")
-    @skipIfRemote
     def test_shellExpandArguments_enabled(self):
         """
         Tests the default launch of a simple program with shell expansion
@@ -191,7 +183,6 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
                 )
 
     @skipIfWindows
-    @skipIfRemote
     def test_shellExpandArguments_disabled(self):
         """
         Tests the default launch of a simple program with shell expansion
@@ -214,7 +205,6 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
                 )
 
     @skipIfWindows
-    @skipIfRemote
     def test_args(self):
         """
         Tests launch of a simple program with arguments
@@ -240,7 +230,6 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
             )
 
     @skipIfWindows
-    @skipIfRemote
     def test_environment(self):
         """
         Tests launch of a simple program with environment variables
@@ -270,7 +259,6 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
             )
 
     @skipIfWindows
-    @skipIfRemote
     @skipIf(
         archs=["arm", "aarch64"]
     )  # failed run https://lab.llvm.org/buildbot/#/builders/96/builds/6933
@@ -334,14 +322,14 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         # Get output from the console. This should contain both the
         # "stopCommands" that were run after the first breakpoint was hit
         self.continue_to_breakpoints(breakpoint_ids)
-        output = self.get_console(timeout=1.0)
+        output = self.get_console(timeout=lldbdap_testcase.DAPTestCaseBase.timeoutval)
         self.verify_commands("stopCommands", output, stopCommands)
 
         # Continue again and hit the second breakpoint.
         # Get output from the console. This should contain both the
         # "stopCommands" that were run after the second breakpoint was hit
         self.continue_to_breakpoints(breakpoint_ids)
-        output = self.get_console(timeout=1.0)
+        output = self.get_console(timeout=lldbdap_testcase.DAPTestCaseBase.timeoutval)
         self.verify_commands("stopCommands", output, stopCommands)
 
         # Continue until the program exits
@@ -354,7 +342,6 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         self.verify_commands("terminateCommands", output, terminateCommands)
 
     @skipIfWindows
-    @skipIfRemote
     def test_extra_launch_commands(self):
         """
         Tests the "launchCommands" with extra launching settings
@@ -402,25 +389,24 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         self.verify_commands("launchCommands", output, launchCommands)
         # Verify the "stopCommands" here
         self.continue_to_next_stop()
-        output = self.get_console(timeout=1.0)
+        output = self.get_console(timeout=lldbdap_testcase.DAPTestCaseBase.timeoutval)
         self.verify_commands("stopCommands", output, stopCommands)
 
         # Continue and hit the second breakpoint.
         # Get output from the console. This should contain both the
         # "stopCommands" that were run after the first breakpoint was hit
         self.continue_to_next_stop()
-        output = self.get_console(timeout=1.0)
+        output = self.get_console(timeout=lldbdap_testcase.DAPTestCaseBase.timeoutval)
         self.verify_commands("stopCommands", output, stopCommands)
 
         # Continue until the program exits
         self.continue_to_exit()
         # Get output from the console. This should contain both the
         # "exitCommands" that were run after the second breakpoint was hit
-        output = self.get_console(timeout=1.0)
+        output = self.get_console(timeout=lldbdap_testcase.DAPTestCaseBase.timeoutval)
         self.verify_commands("exitCommands", output, exitCommands)
 
     @skipIfWindows
-    @skipIfRemote
     def test_failing_launch_commands(self):
         """
         Tests "launchCommands" failures prevents a launch.

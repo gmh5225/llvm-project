@@ -60,9 +60,10 @@ enum class SparseEmitStrategy {
 // The SparseAssembler pass.
 //===----------------------------------------------------------------------===//
 
-void populateSparseAssembler(RewritePatternSet &patterns);
+void populateSparseAssembler(RewritePatternSet &patterns, bool directOut);
 
 std::unique_ptr<Pass> createSparseAssembler();
+std::unique_ptr<Pass> createSparseAssembler(bool directOut);
 
 //===----------------------------------------------------------------------===//
 // The SparseReinterpretMap pass.
@@ -246,6 +247,12 @@ std::unique_ptr<Pass> createSparsificationAndBufferizationPass(
     bool createSparseDeallocs, bool enableRuntimeLibrary,
     bool enableBufferInitialization, unsigned vectorLength,
     bool enableVLAVectorization, bool enableSIMDIndex32, bool enableGPULibgen);
+
+//===----------------------------------------------------------------------===//
+// Sparse Iteration Transform Passes
+//===----------------------------------------------------------------------===//
+
+std::unique_ptr<Pass> createSparseSpaceCollapsePass();
 
 //===----------------------------------------------------------------------===//
 // Registration.

@@ -46,7 +46,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addRequired<MachineDominatorTree>();
+    AU.addRequired<MachineDominatorTreeWrapperPass>();
     AU.addRequired<MachinePostDominatorTree>();
     AU.addRequired<MachineUniformityAnalysisPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
@@ -177,13 +177,22 @@ void DivergenceLoweringHelper::buildMergeLaneMasks(
   B.buildInstr(OrOp, {DstReg}, {PrevMaskedReg, CurMaskedReg});
 }
 
-void DivergenceLoweringHelper::constrainAsLaneMask(Incoming &In) { return; }
+// GlobalISel has to constrain S1 incoming taken as-is with lane mask register
+// class. Insert a copy of Incoming.Reg to new lane mask inside Incoming.Block,
+// Incoming.Reg becomes that new lane mask.
+void DivergenceLoweringHelper::constrainAsLaneMask(Incoming &In) {
+  B.setInsertPt(*In.Block, In.Block->getFirstTerminator());
+
+  auto Copy = B.buildCopy(LLT::scalar(1), In.Reg);
+  MRI->setRegClass(Copy.getReg(0), ST->getBoolRC());
+  In.Reg = Copy.getReg(0);
+}
 
 } // End anonymous namespace.
 
 INITIALIZE_PASS_BEGIN(AMDGPUGlobalISelDivergenceLowering, DEBUG_TYPE,
                       "AMDGPU GlobalISel divergence lowering", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTree)
 INITIALIZE_PASS_DEPENDENCY(MachineUniformityAnalysisPass)
 INITIALIZE_PASS_END(AMDGPUGlobalISelDivergenceLowering, DEBUG_TYPE,
@@ -200,7 +209,8 @@ FunctionPass *llvm::createAMDGPUGlobalISelDivergenceLoweringPass() {
 
 bool AMDGPUGlobalISelDivergenceLowering::runOnMachineFunction(
     MachineFunction &MF) {
-  MachineDominatorTree &DT = getAnalysis<MachineDominatorTree>();
+  MachineDominatorTree &DT =
+      getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   MachinePostDominatorTree &PDT = getAnalysis<MachinePostDominatorTree>();
   MachineUniformityInfo &MUI =
       getAnalysis<MachineUniformityAnalysisPass>().getUniformityInfo();

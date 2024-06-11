@@ -44,6 +44,10 @@ function(create_object_library fq_target_name)
     message(FATAL_ERROR "'add_object_library' rule requires SRCS to be specified.")
   endif()
 
+  if(NOT ADD_OBJECT_CXX_STANDARD)
+    set(ADD_OBJECT_CXX_STANDARD ${CMAKE_CXX_STANDARD})
+  endif()
+
   set(internal_target_name ${fq_target_name}.__internal__)
   set(public_packaging_for_internal "-DLIBC_COPT_PUBLIC_PACKAGING")
 
@@ -59,7 +63,6 @@ function(create_object_library fq_target_name)
   )
   target_include_directories(${fq_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
   target_include_directories(${fq_target_name} PRIVATE ${LIBC_SOURCE_DIR})
-  target_include_directories(${fq_target_name} PRIVATE ${LIBC_SOURCE_DIR}/include)
   target_compile_options(${fq_target_name} PRIVATE ${compile_options})
 
   # The NVPTX target is installed as LLVM-IR but the internal testing toolchain
@@ -74,9 +77,11 @@ function(create_object_library fq_target_name)
     )
     target_include_directories(${internal_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
     target_include_directories(${internal_target_name} PRIVATE ${LIBC_SOURCE_DIR})
-    target_include_directories(${internal_target_name} PRIVATE ${LIBC_SOURCE_DIR}/include)
     target_compile_options(${internal_target_name} PRIVATE ${compile_options}
                            -fno-lto -march=${LIBC_GPU_TARGET_ARCHITECTURE})
+    set_target_properties(${internal_target_name}
+                          PROPERTIES
+                          CXX_STANDARD ${ADD_OBJECT_CXX_STANDARD})
   endif()
 
   if(SHOW_INTERMEDIATE_OBJECTS)
@@ -94,9 +99,6 @@ function(create_object_library fq_target_name)
     target_link_libraries(${fq_target_name} PUBLIC ${fq_deps_list})
   endif()
 
-  if(NOT ADD_OBJECT_CXX_STANDARD)
-    set(ADD_OBJECT_CXX_STANDARD ${CMAKE_CXX_STANDARD})
-  endif()
   set_target_properties(
     ${fq_target_name}
     PROPERTIES
@@ -248,9 +250,6 @@ function(create_entrypoint_object fq_target_name)
   if(NOT ADD_ENTRYPOINT_OBJ_SRCS)
     message(FATAL_ERROR "`add_entrypoint_object` rule requires SRCS to be specified.")
   endif()
-  if(NOT ADD_ENTRYPOINT_OBJ_HDRS)
-    message(FATAL_ERROR "`add_entrypoint_object` rule requires HDRS to be specified.")
-  endif()
   if(NOT ADD_ENTRYPOINT_OBJ_CXX_STANDARD)
     set(ADD_ENTRYPOINT_OBJ_CXX_STANDARD ${CMAKE_CXX_STANDARD})
   endif()
@@ -281,7 +280,6 @@ function(create_entrypoint_object fq_target_name)
   target_compile_options(${internal_target_name} BEFORE PRIVATE ${common_compile_options})
   target_include_directories(${internal_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
   target_include_directories(${internal_target_name} PRIVATE ${LIBC_SOURCE_DIR})
-  target_include_directories(${internal_target_name} PRIVATE ${LIBC_SOURCE_DIR}/include)
   add_dependencies(${internal_target_name} ${full_deps_list})
   target_link_libraries(${internal_target_name} ${full_deps_list})
 
@@ -303,7 +301,6 @@ function(create_entrypoint_object fq_target_name)
   target_compile_options(${fq_target_name} BEFORE PRIVATE ${common_compile_options} -DLIBC_COPT_PUBLIC_PACKAGING)
   target_include_directories(${fq_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
   target_include_directories(${fq_target_name} PRIVATE ${LIBC_SOURCE_DIR})
-  target_include_directories(${fq_target_name} PRIVATE ${LIBC_SOURCE_DIR}/include)
   add_dependencies(${fq_target_name} ${full_deps_list})
   target_link_libraries(${fq_target_name} ${full_deps_list})
 

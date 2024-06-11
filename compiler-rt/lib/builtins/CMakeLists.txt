@@ -190,6 +190,7 @@ set(GENERIC_SOURCES
 
 # We only build BF16 files when "__bf16" is available.
 set(BF16_SOURCES
+    extendbfsf2.c
     truncdfbf2.c
     truncsfbf2.c
 )
@@ -561,7 +562,7 @@ set(aarch64_SOURCES
 )
 
 if(COMPILER_RT_HAS_AARCH64_SME AND COMPILER_RT_HAS_FNO_BUILTIN_FLAG AND (COMPILER_RT_HAS_AUXV OR COMPILER_RT_BAREMETAL_BUILD))
-  list(APPEND aarch64_SOURCES aarch64/sme-abi.S aarch64/sme-abi-init.c aarch64/sme-libc-routines.c)
+  list(APPEND aarch64_SOURCES aarch64/sme-abi.S aarch64/sme-abi-init.c aarch64/sme-abi-vg.c aarch64/sme-libc-routines.c)
   message(STATUS "AArch64 SME ABI routines enabled")
   set_source_files_properties(aarch64/sme-libc-routines.c PROPERTIES COMPILE_FLAGS "-fno-builtin")
 else()
@@ -749,7 +750,7 @@ set(ve_SOURCES
   ${GENERIC_SOURCES})
 
 add_custom_target(builtins)
-set_target_properties(builtins PROPERTIES FOLDER "Compiler-RT Misc")
+set_target_properties(builtins PROPERTIES FOLDER "Compiler-RT/Metatargets")
 
 option(COMPILER_RT_ENABLE_SOFTWARE_INT128
   "Enable the int128 builtin routines for all targets."
@@ -916,7 +917,7 @@ cmake_dependent_option(COMPILER_RT_BUILD_CRT "Build crtbegin.o/crtend.o" ON "COM
 if (COMPILER_RT_BUILD_CRT)
   add_compiler_rt_component(crt)
 
-  option(COMPILER_RT_CRT_USE_EH_FRAME_REGISTRY "Use eh_frame in crtbegin.o/crtend.o" OFF)
+  option(COMPILER_RT_CRT_USE_EH_FRAME_REGISTRY "Use eh_frame in crtbegin.o/crtend.o" ON)
 
   include(CheckSectionExists)
   check_section_exists(".init_array" COMPILER_RT_HAS_INITFINI_ARRAY
